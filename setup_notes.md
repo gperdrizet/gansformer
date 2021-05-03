@@ -40,7 +40,7 @@ sudo dpkg -i libcudnn7-doc_7.5.0.56-1+cuda10.0_amd64.deb
 Actualy, NVM - importing tensorflow gives Illegal Instruction. Can't be completely sure the problem
 was not just order of operations - maybe we just should have dealt with CUDA and CuDNN before
 making the conda env. Or maybe if we had used conda to install tensorflow the mucking around
-with CUDA and CuDNN would have been unnec unnecessary.
+with CUDA and CuDNN would have been unnecessary. Either way seems to have worked...
 
 1. Remade conda env installing tensorflow-gpu ver 1.14.0 via conda:
 ```
