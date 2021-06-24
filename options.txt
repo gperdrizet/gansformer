@@ -1,0 +1,269 @@
+usage: run_network.py [-h] [--expname EXPNAME] [--eval] [--train]
+                      [--gpus GPUS] [--gansformer-default]
+                      [--baseline {GAN,StyleGAN2,kGAN,SAGAN}]
+                      [--pretrained-pkl PRETRAINED_PKL] [--restart] [--reload]
+                      [--recompile] [--last-snapshots LAST_SNAPSHOTS]
+                      [--data-dir DIR] --dataset DATASET [--ratio RATIO]
+                      [--resolution RESOLUTION] [--num-threads NUM_THREADS]
+                      [--mirror-augment] [--train-images-num TRAIN_IMAGES_NUM]
+                      [--batch-size BATCH_SIZE]
+                      [--minibatch-size MINIBATCH_SIZE] [--total-kimg KIMG]
+                      [--gamma GAMMA] [--clip CLIP] [--g-lr G_LR]
+                      [--d-lr D_LR] [--result-dir DIR] [--metrics METRICS]
+                      [--summarize [BOOL]] [--truncation-psi TRUNCATION_PSI]
+                      [--keep-samples [BOOL]]
+                      [--eval-images-num EVAL_IMAGES_NUM] [--vis-images]
+                      [--vis-latents] [--vis-maps] [--vis-layer-maps]
+                      [--vis-interpolations] [--vis-noise-var]
+                      [--vis-style-mix] [--vis-grid] [--vis-num VIS_NUM]
+                      [--vis-rich-num VIS_RICH_NUM]
+                      [--vis-section-size VIS_SECTION_SIZE]
+                      [--blending-alpha BLENDING_ALPHA]
+                      [--interpolation-density INTERPOLATION_DENSITY]
+                      [--g-arch {orig,skip,resnet}]
+                      [--d-arch {orig,skip,resnet}] [--tanh]
+                      [--mapping-layersnum MAPPING_LAYERSNUM]
+                      [--mapping-lrmul MAPPING_LRMUL]
+                      [--mapping-dim MAPPING_DIM] [--mapping-resnet]
+                      [--mapping-shared-dim MAPPING_SHARED_DIM]
+                      [--g-loss {logistic,logistic_ns,hinge,wgan}]
+                      [--g-reg-weight G_REG_WEIGHT]
+                      [--d-loss {wgan,logistic,hinge}]
+                      [--d-reg {non,gp,r1,r2}] [--style-mixing STYLE_MIXING]
+                      [--component-mixing COMPONENT_MIXING]
+                      [--component-dropout COMPONENT_DROPOUT]
+                      [--attention-dropout ATTENTION_DROPOUT] [--style [BOOL]]
+                      [--latent-stem] [--fused-modconv [BOOL]]
+                      [--local-noise [BOOL]]
+                      [--minibatch-std-size MINIBATCH_STD_SIZE]
+                      [--transformer] [--latent-size LATENT_SIZE]
+                      [--components-num COMPONENTS_NUM]
+                      [--num-heads NUM_HEADS]
+                      [--normalize {batch,instance,layer}]
+                      [--integration {add,mul,both}]
+                      [--g-start-res G_START_RES] [--g-end-res G_END_RES]
+                      [--d-transformer] [--d-start-res D_START_RES]
+                      [--d-end-res D_END_RES] [--ltnt-gate] [--img-gate]
+                      [--kmeans] [--kmeans-iters KMEANS_ITERS] [--iterative]
+                      [--mapping-ltnt2ltnt] [--g-ltnt2ltnt]
+                      [--g-img2img G_IMG2IMG] [--g-img2ltnt] [--d-ltnt2ltnt]
+                      [--d-img2img D_IMG2IMG] [--use-pos] [--pos-dim POS_DIM]
+                      [--pos-type {linear,sinus,trainable,trainable2d}]
+                      [--pos-init {uniform,normal}]
+                      [--pos-directions-num POS_DIRECTIONS_NUM] [--kgan]
+                      [--merge-layer MERGE_LAYER]
+                      [--merge-type {sum,softmax,max,leaves}] [--merge-same]
+
+Train the GANsformer
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --expname EXPNAME     Experiment name
+  --eval                Evaluation mode (default: False)
+  --train               Train mode (default: False)
+  --gpus GPUS           Comma-separated list of GPUs to be used (default: 0)
+  --gansformer-default  Select a default GANsformer configuration, either
+                        pretrained (default) or from scratch (with
+                        --pretrained-pkl None)
+  --baseline {GAN,StyleGAN2,kGAN,SAGAN}
+                        Use a baseline model configuration
+  --pretrained-pkl PRETRAINED_PKL
+                        Filename for a snapshot to resume (optional)
+  --restart             Restart training from scratch
+  --reload              Reload options from the original experiment
+                        configuration file. If False, uses the command line
+                        arguments when resuming training (default: False)
+  --recompile           Recompile model from source code when resuming
+                        training. If False, loading modules created when the
+                        experiment first started
+  --last-snapshots LAST_SNAPSHOTS
+                        Number of last snapshots to save. -1 for all (default:
+                        10)
+  --data-dir DIR        Datasets root directory (default: datasets)
+  --dataset DATASET     Training dataset name (subdirectory of data-dir)
+  --ratio RATIO         Image height/width ratio in the dataset
+  --resolution RESOLUTION
+                        Training resolution
+  --num-threads NUM_THREADS
+                        Number of input processing threads (default: 4)
+  --mirror-augment      Perform horizontal flip augmentation for the data
+                        (default: None)
+  --train-images-num TRAIN_IMAGES_NUM
+                        Maximum number of images to train on. If not
+                        specified, train on the whole dataset.
+  --batch-size BATCH_SIZE
+                        Global batch size (optimization step) (default: 32)
+  --minibatch-size MINIBATCH_SIZE
+                        Batch size per GPU, gradients will be accumulated to
+                        match batch-size (default: 4)
+  --total-kimg KIMG     Training length in thousands of images (default:
+                        25000)
+  --gamma GAMMA         R1 regularization weight (default: 10)
+  --clip CLIP           Gradient clipping threshold (optional)
+  --g-lr G_LR           Generator learning rate (default: 0.002)
+  --d-lr D_LR           Discriminator learning rate (default: 0.002)
+  --result-dir DIR      Root directory for experiments (default: results)
+  --metrics METRICS     Comma-separated list of metrics or none (default: fid)
+  --summarize [BOOL]    Create TensorBoard summaries (default: True)
+  --truncation-psi TRUNCATION_PSI
+                        Truncation Psi to be used in producing sample images
+                        (used only for visualizations, _not used_ in training
+                        or for computing metrics) (default: 0.65)
+  --keep-samples [BOOL]
+                        Keep all prior samples during training, or if False,
+                        just the most recent ones (default: True)
+  --eval-images-num EVAL_IMAGES_NUM
+                        Number of images to evaluate metrics on (default:
+                        50,000)
+  --vis-images          Save image samples
+  --vis-latents         Save latent vectors
+  --vis-maps            Save attention maps (for GANsformer only)
+  --vis-layer-maps      Save attention maps for all layers (for GANsformer
+                        only)
+  --vis-interpolations  Create latent interpolations
+  --vis-noise-var       Create noise variation visualization
+  --vis-style-mix       Create style mixing visualization
+  --vis-grid            Whether to save the samples in one large grid files
+                        (default: True in training)
+  --vis-num VIS_NUM     Number of images for which visualization will be
+                        created (default: grid-size/100 in train/eval)
+  --vis-rich-num VIS_RICH_NUM
+                        Number of samples for which richer visualizations will
+                        be created (default: 5)
+  --vis-section-size VIS_SECTION_SIZE
+                        Visualization section size to process at one (section-
+                        size <= vis-num) for memory footprint (default: 100)
+  --blending-alpha BLENDING_ALPHA
+                        Proportion for generated images and attention maps
+                        blends (default: 0.3)
+  --interpolation-density INTERPOLATION_DENSITY
+                        Number of samples in between two end points of an
+                        interpolation (default: 8)
+  --g-arch {orig,skip,resnet}
+                        Generator architecture type (default: skip)
+  --d-arch {orig,skip,resnet}
+                        Discriminator architecture type (default: resnet)
+  --tanh                tanh on generator output (default: False)
+  --mapping-layersnum MAPPING_LAYERSNUM
+                        Number of mapping layers (default: 8)
+  --mapping-lrmul MAPPING_LRMUL
+                        Mapping network learning rate multiplier (default:
+                        0.01)
+  --mapping-dim MAPPING_DIM
+                        Mapping layers dimension (default: latent_size)
+  --mapping-resnet      Use resent connections in mapping layers (default:
+                        False)
+  --mapping-shared-dim MAPPING_SHARED_DIM
+                        Perform one shared mapping to all latent components
+                        concatenated together using the set dimension
+                        (default: disabled)
+  --g-loss {logistic,logistic_ns,hinge,wgan}
+                        Generator loss type (default: logistic_ns)
+  --g-reg-weight G_REG_WEIGHT
+                        Generator regularization weight (default: 1.0)
+  --d-loss {wgan,logistic,hinge}
+                        Discriminator loss type (default: logistic)
+  --d-reg {non,gp,r1,r2}
+                        Discriminator regularization type (default: r1)
+  --style-mixing STYLE_MIXING
+                        Style mixing (layerwise) probability (default: 0.9)
+  --component-mixing COMPONENT_MIXING
+                        Component mixing (objectwise) probability (default:
+                        0.0)
+  --component-dropout COMPONENT_DROPOUT
+                        Component dropout (default: 0.0)
+  --attention-dropout ATTENTION_DROPOUT
+                        Attention dropout (default: 0.12)
+  --style [BOOL]        Global style modulation (default: True)
+  --latent-stem         Input latent through the generator stem grid (default:
+                        False)
+  --fused-modconv [BOOL]
+                        Fuse modulation and convolution operations (default:
+                        True)
+  --local-noise [BOOL]  Add stochastic local noise each layer (default: True)
+  --minibatch-std-size MINIBATCH_STD_SIZE
+                        Add minibatch standard deviation layer in the
+                        discriminator, 0 to disable (default: 4)
+  --transformer         Add transformer layers to the generator: top-down
+                        latents-to-image (default: False)
+  --latent-size LATENT_SIZE
+                        Latent size, summing the dimension of all components
+                        (default: 512)
+  --components-num COMPONENTS_NUM
+                        Components number. Each component has latent dimension
+                        of 'latent-size / components-num'. 1 for StyleGAN
+                        since it has one global latent vector (default: 1)
+  --num-heads NUM_HEADS
+                        Number of attention heads (default: 1)
+  --normalize {batch,instance,layer}
+                        Feature normalization type (optional)
+  --integration {add,mul,both}
+                        Feature integration type: additive, multiplicative or
+                        both (default: add)
+  --g-start-res G_START_RES
+                        Transformer minimum generator resolution
+                        (logarithmic): first layer in which transformer will
+                        be applied (default: 0)
+  --g-end-res G_END_RES
+                        Transformer maximum generator resolution
+                        (logarithmic): last layer in which transformer will be
+                        applied (default: 8)
+  --d-transformer       Add transformer layers to the discriminator (bottom-up
+                        image-to-latents) (default: False)
+  --d-start-res D_START_RES
+                        Transformer minimum discriminator resolution
+                        (logarithmic): first layer in which transformer will
+                        be applied (default: 0)
+  --d-end-res D_END_RES
+                        Transformer maximum discriminator resolution
+                        (logarithmic): last layer in which transformer will be
+                        applied (default: 8)
+  --ltnt-gate           Gate attention from latents, such that components may
+                        not send information when gate value is low (default:
+                        False)
+  --img-gate            Gate attention for images, such that some image
+                        positions may not get updated or receive information
+                        when gate value is low (default: False)
+  --kmeans              Track and update image-to-latents assignment
+                        centroids, used in the duplex attention (default:
+                        False)
+  --kmeans-iters KMEANS_ITERS
+                        Number of K-means iterations per transformer layer.
+                        Note that centroids are carried from layer to layer
+                        (default: 1)
+  --iterative           Whether to carry over attention assignments across
+                        transformer layers of different resolutions (default:
+                        False)
+  --mapping-ltnt2ltnt   Add self-attention over latents in the mapping network
+                        (default: False)
+  --g-ltnt2ltnt         Add self-attention over latents in the synthesis
+                        network (default: False)
+  --g-img2img G_IMG2IMG
+                        Add self-attention between images positions in that
+                        layer of the generator (SAGAN) (default: disabled)
+  --g-img2ltnt          Add image to latents attention (bottom-up) (default:
+                        None)
+  --d-ltnt2ltnt         Add self-attention over latents in the discriminator
+                        (default: False)
+  --d-img2img D_IMG2IMG
+                        Add self-attention over images positions in that layer
+                        of the discriminator (SAGAN) (default: disabled)
+  --use-pos             Use positional encoding (default: False)
+  --pos-dim POS_DIM     Positional encoding dimension (default: latent-size)
+  --pos-type {linear,sinus,trainable,trainable2d}
+                        Positional encoding type (default: sinus)
+  --pos-init {uniform,normal}
+                        Positional encoding initialization distribution
+                        (default: uniform)
+  --pos-directions-num POS_DIRECTIONS_NUM
+                        Positional encoding number of spatial directions
+                        (default: 2)
+  --kgan                Generate components-num images and then merge them
+                        (k-GAN) (default: False)
+  --merge-layer MERGE_LAYER
+                        Merge layer, where images get combined through alpha-
+                        composition (default: -1)
+  --merge-type {sum,softmax,max,leaves}
+                        Merge type (default: sum)
+  --merge-same          Merge images with same alpha weights across all
+                        spatial positions (default: None)
